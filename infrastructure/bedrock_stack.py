@@ -15,7 +15,7 @@ from constructs import Construct
 
 
 class AmazonBedrockRedundantAPI(Stack):
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, environment_variables:dict, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         # Create Lambda function
@@ -44,6 +44,7 @@ class AmazonBedrockRedundantAPI(Stack):
             runtime=_lambda.Runtime.PYTHON_3_11,
             code=_lambda.Code.from_asset("src"),
             handler="lambda_function.lambda_handler",
+            environment= environment_variables,
             timeout=Duration.seconds(30),
             memory_size=256,
             role=lambda_role

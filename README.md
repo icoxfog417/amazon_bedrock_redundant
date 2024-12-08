@@ -55,7 +55,7 @@ pre-commit install
 pytest
 ```
 
-3. Deploy infrastructure:
+3. Deploy infrastructure by CDK:
 ```bash
 cdk deploy --context account=YOUR_ACCOUNT_ID --context region=YOUR_REGION
 ```
@@ -67,7 +67,7 @@ Send POST request to the API Gateway endpoint:
 ```bash
 curl -X POST https://your-api-endpoint.execute-api.region.amazonaws.com/prod/ \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Your prompt here"}'
+  -d '{"contents": ["Hello, Amazon Bedrock. Please tell me the effective use cases."]}'
 ```
 
 ## Contributing

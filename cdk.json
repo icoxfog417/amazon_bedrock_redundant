@@ -1,0 +1,15 @@
+{
+  "app": "uv run python -m infrastructure.app",
+  "watch": {
+    "include": [
+      "**"
+    ],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "**/__init__.py",
+      "python/__pycache__",
+      "tests"
+    ]
+  }
+}

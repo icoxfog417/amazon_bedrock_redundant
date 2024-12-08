@@ -1,7 +1,5 @@
 models:
   - name: "claude-3-sonnet"
-    id: "anthropic.claude-v3-sonnet"
-    provider: "anthropic"
     model_id: "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
     max_retries: 3
     retry_delay: 1
@@ -10,8 +8,6 @@ models:
       - "us-west-2"
   
   - name: "amazon-nova"
-    id: "amazon.nova-pro"
-    provider: "amazon"
     model_id: "us.amazon.nova-pro-v1:0"
     max_retries: 3
     retry_delay: 1

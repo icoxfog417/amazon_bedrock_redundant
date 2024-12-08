@@ -5,18 +5,13 @@ import time
 from typing import Any, Dict, Optional
 
 import boto3
-import yaml
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger("amazon-bedrock-redundant-api")
 logger.setLevel(logging.INFO)
 
-def load_model_config() -> Dict[str, Any]:
-    config_path = os.path.join(os.path.dirname(__file__), "../config/models.yaml")
-    with open(config_path, "r") as f:
-        return yaml.safe_load(f)
 
-config = load_model_config()
+config = json.loads(os.environ.get("MODEL_CONFIG", "{}"))
 models = config.get("models", [])
 regions = {region for model in models for region in model.get("regions", [])}
 
@@ -44,6 +39,7 @@ def invoke_model(
                 "maxTokens": max_tokens
             }
         )
+        logger.info(f"Got response from {model_id} in {client.meta.region_name}.")
         return response
     except ClientError as e:
         if e.response["Error"]["Code"] == "ThrottlingException":
@@ -53,15 +49,17 @@ def invoke_model(
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
-        contents = event.get("contents")
+        logger.info(f"Got event:\n {event}")
+        body = json.loads(event.get("body", '{}'))
+        contents = body.get("contents")
         if not contents:
             return {
                 "statusCode": 400,
                 "body": json.dumps({"error": "No prompt provided"})
             }
 
-        temperature = event.get("temperature", 0.7)
-        max_tokens = event.get("max_tokens", 1024)
+        temperature = body.get("temperature", 0.7)
+        max_tokens = body.get("max_tokens", 1024)
         response = None
 
         for model in models:
@@ -84,11 +82,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         break
                     else:
                         time.sleep(retry_delay)
-                logger.warning(f"Max retries reached for {model.get('name')} in {region}.")
+                    logger.warning(f"Max retries reached for {model.get('name')} in {region} (retry no:{_retry + 1}).")
             
             if response is not None:
                 break
-            logger.warning(f"Max retries reached for {model.get('name')}.")
+            logger.warning(f"Max retries ({max_retries}) reached for {model.get('name')}.")
 
         if response is not None:
             return {
