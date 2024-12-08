@@ -1,0 +1,24 @@
+[project]
+name = "amazon-bedrock-redundant-api"
+version = "0.1.0"
+description = "Amazon Bedrock redundant API by cross region and cross model inference"
+requires-python = ">=3.10"
+dependencies = [
+    "aws-cdk-lib>=2.172.0",
+    "boto3>=1.35.76",
+    "constructs>=10.3.0",
+    "pytest-mock>=3.14.0",
+    "pytest>=8.3.4",
+    "pyyaml>=6.0.2",
+    "ruff>=0.8.2",
+]
+readme="README.md"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311" 
+lint.select = ["E", "F", "B", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
