@@ -78,15 +78,19 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         max_tokens,
                         temperature
                     )
+                    # Retry if rate limit hit
                     if response is not None:
                         break
                     else:
+                        logger.warning(f"Retry {model.get('name')} in {region} {_retry + 1}/{max_retries} times.")
                         time.sleep(retry_delay)
-                    logger.warning(f"Max retries reached for {model.get('name')} in {region} (retry no:{_retry + 1}).")
-            
+                # Break if response is not None
+                if response is not None:
+                    break
+            # Break if response is not None
             if response is not None:
                 break
-            logger.warning(f"Max retries ({max_retries}) reached for {model.get('name')}.")
+            logger.warning(f"Switch next model...")
 
         if response is not None:
             return {
