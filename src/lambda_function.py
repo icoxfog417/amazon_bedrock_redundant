@@ -5,11 +5,19 @@ import time
 from typing import Any, Dict, Optional
 
 import boto3
+from aws_xray_sdk.core import xray_recorder, patch
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger("amazon-bedrock-redundant-api")
 logger.setLevel(logging.INFO)
 
+# Configure X-Ray
+xray_recorder.configure(
+    sampling=False,
+    context_missing='LOG_ERROR',
+    daemon_address='127.0.0.1:3000',
+)
+patch(["boto3"])
 
 config = json.loads(os.environ.get("MODEL_CONFIG", "{}"))
 models = config.get("models", [])
@@ -67,26 +75,27 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             regions = model.get("regions", [])
             max_retries = model.get("max_retries", 2)
             retry_delay = model.get("retry_delay", 2)
-
-            for region in regions:
-                client = clients[region]
-                for _retry in range(max_retries):
-                    response = invoke_model(
-                        client,
-                        model_id,
-                        contents,
-                        max_tokens,
-                        temperature
-                    )
-                    # Retry if rate limit hit
+            with xray_recorder.in_segment(f'bedrock-request') as segment:
+                segment.put_annotation('model_id', model_id)
+                for region in regions:
+                    client = clients[region]
+                    for _retry in range(max_retries):
+                        response = invoke_model(
+                            client,
+                            model_id,
+                            contents,
+                            max_tokens,
+                            temperature
+                        )
+                        # Retry if rate limit hit
+                        if response is not None:
+                            break
+                        else:
+                            logger.warning(f"Retry {model.get('name')} in {region} {_retry + 1}/{max_retries} times.")
+                            time.sleep(retry_delay)
+                    # Break if response is not None
                     if response is not None:
                         break
-                    else:
-                        logger.warning(f"Retry {model.get('name')} in {region} {_retry + 1}/{max_retries} times.")
-                        time.sleep(retry_delay)
-                # Break if response is not None
-                if response is not None:
-                    break
             # Break if response is not None
             if response is not None:
                 break

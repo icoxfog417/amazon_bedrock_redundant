@@ -29,6 +29,11 @@ class AmazonBedrockRedundantAPI(Stack):
                 "service-role/AWSLambdaBasicExecutionRole"
             )
         )
+        lambda_role.add_managed_policy(
+            iam.ManagedPolicy.from_aws_managed_policy_name(
+                "AWSXRayDaemonWriteAccess"
+            )
+        )
 
         lambda_role.add_to_policy(
             iam.PolicyStatement(
@@ -42,19 +47,31 @@ class AmazonBedrockRedundantAPI(Stack):
         handler = _lambda.Function(
             self, "BedrockHandler",
             runtime=_lambda.Runtime.PYTHON_3_11,
-            code=_lambda.Code.from_asset("src"),
+            code=_lambda.Code.from_asset(
+                "src",
+                bundling={
+                    "image": _lambda.Runtime.PYTHON_3_11.bundling_image,
+                    "command": ["bash", "-c", 
+                                "pip install -r requirements.txt -t /tmp/deps && cp -au . /tmp/deps"],
+                    "user": "root"
+                }),
             handler="lambda_function.lambda_handler",
             environment= environment_variables,
             timeout=Duration.seconds(30),
             memory_size=256,
-            role=lambda_role
+            role=lambda_role,
+            tracing=_lambda.Tracing.ACTIVE
         )
 
         # Create API Gateway
         api = apigw.RestApi(
             self, "BedrockAPI",
             rest_api_name="Amazon Bedrock Redundant API",
-            description="API for handling redundant model invocations across regions"
+            description="API for handling redundant model invocations across regions",
+            deploy_options=apigw.StageOptions(
+                stage_name="v1",
+                tracing_enabled=True
+            )
         )
 
         integration = apigw.LambdaIntegration(
