@@ -1,9 +1,9 @@
 import json
-import boto3
-import traceback
-from aws_xray_sdk.core import xray_recorder, patch
 import logging
+import traceback
 
+import boto3
+from aws_xray_sdk.core import patch, xray_recorder
 
 logging.basicConfig(level='WARNING')
 logging.getLogger('aws_xray_sdk').setLevel(logging.INFO)
@@ -25,7 +25,7 @@ def invoke_bedrock():
     
     # Create a segment
     with xray_recorder.in_segment('bedrock_request') as segment:
-    
+        segment.put_metadata('service', 'bedrock')
         try:
             # Create subsegment for the API call
             with xray_recorder.in_subsegment('bedrock_inference') as subsegment:

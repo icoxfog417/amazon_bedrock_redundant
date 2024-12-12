@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM template for Amazon Bedrock Redundant API
+
+Globals:
+  Function:
+    Timeout: 29
+    MemorySize: 128
+    Runtime: python3.10
+    Architectures:
+      - arm64
+
+Resources:
+  BedrockRedundantFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: lambda_function.lambda_handler
+      MemorySize: 256
+      PackageType: Zip
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - xray:PutTraceSegments
+                - xray:PutTelemetryRecords
+              Resource: '*'
+      Tracing: Active
+      Environment:
+        Variables:
+          LOG_LEVEL: INFO
+          CONFIG_FILE_PATH: config/models.yaml
+      Events:
+        BedrockAPI:
+          Type: Api
+          Properties:
+            Path: /invoke
+            Method: post
+
+Outputs:
+  BedrockAPIEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/invoke"
